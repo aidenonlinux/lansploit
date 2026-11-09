@@ -24,7 +24,7 @@ Consoles natively restrict Minecraft Bedrock Edition from adding custom external
 1. Open **Automator** on your Mac (`Cmd + Space` -> type `Automator`).
 2. Click **New Document**, select **Application**, and click **Choose**.
 3. In the left sidebar, search for **Run AppleScript** and drag it into the workflow area.
-4. Paste the **LANSploit** AppleScript code into the editor.
+4. Paste the [**LANSploit** AppleScript](https://github.com/aidenonlinux/lansploit/blob/main/code.txt) code into the editor.
 5. Press `Cmd + S`, name the app **`LANSploit`**, set the File Format to **Application**, and save it to your **Applications** folder.
 
 ## Usage
