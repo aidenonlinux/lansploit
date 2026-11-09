@@ -1,0 +1,65 @@
+on run {input, parameters}
+	-- Ask for the Target Server IP
+	set serverDialog to display dialog "Enter the custom Bedrock server IP or domain:" default answer "://example.com" with title "LANSploit" buttons {"Cancel", "Next"} default button "Next"
+	set targetIP to text returned of serverDialog
+	
+	-- Ask for the Target Server Port
+	set portDialog to display dialog "Enter the server port:" default answer "19132" with title "LANSploit" buttons {"Cancel", "Start Proxy"} default button "Start Proxy"
+	set targetPort to text returned of portDialog
+	
+	-- Write the complete Python UDP proxy to a temporary file
+	set pythonScript to "import socket
+import sys
+import select
+
+TARGET_IP = sys.argv[1]
+TARGET_PORT = int(sys.argv[2])
+LOCAL_PORT = 19132
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+sock.bind(('0.0.0.0', LOCAL_PORT))
+
+clients = {}
+sockets = [sock]
+
+while True:
+    readable, _, _ = select.select(sockets, [], [])
+    for s in readable:
+        try:
+            data, addr = s.recvfrom(4096)
+            if s is sock:
+                if addr not in clients:
+                    c_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    c_sock.connect((TARGET_IP, TARGET_PORT))
+                    clients[addr] = c_sock
+                    clients[c_sock] = addr
+                    sockets.append(c_sock)
+                clients[addr].send(data)
+            else:
+                client_addr = clients.get(s)
+                if client_addr:
+                    sock.sendto(data, client_addr)
+        except Exception:
+            pass"
+	
+	do shell script "cat << 'EOF' > /tmp/lansploit_proxy.py" & return & pythonScript & return & "EOF"
+	
+	-- Start the Python proxy in the background and save its Process ID (PID)
+	set proxyPID to do shell script "/usr/bin/python3 /tmp/lansploit_proxy.py " & quoted form of targetIP & " " & quoted form of targetPort & " > /dev/null 2>&1 & echo $!"
+	
+	-- Keep a dialog open so you can cleanly stop the proxy later
+	display dialog "LANSploit is active!
+
+Rerouting LAN to: " & targetIP & ":" & targetPort & "
+
+Open Minecraft on your console, go to the Friends tab, and join the LAN Game." with title "LANSploit — Running" buttons {"Stop Proxy"} default button "Stop Proxy"
+	
+	-- Clean up when Stop Proxy is clicked
+	try
+		do shell script "kill " & proxyPID
+		do shell script "rm -f /tmp/lansploit_proxy.py"
+	end try
+	
+	display notification "The LANSploit proxy has been stopped." with title "LANSploit"
+end run
